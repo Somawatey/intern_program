@@ -3,89 +3,83 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Permission;
+use Inertia\Inertia;
 
 class RolesController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'role:admin']);
+    }
+
     public function index()
     {
-        $roles = Role::paginate(10);
-
-        return Inertia::render('roles/index', [
-            'auth' => [
-            'user' => Auth::user(),
-        ],
-            'roles' => $roles
+        return Inertia::render('Roles/Index', [
+            'roles' => Role::with('permissions')->get()
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('roles/create', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
+        return Inertia::render('Roles/Create', [
             'permissions' => Permission::all()
         ]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-           'name' => 'required|min:3|unique:roles,name'
-        ]);
-
-        $role = Role::create($validated);
-
-        if($request->permissions) {
-
-            $permissions = Permission::whereIn("id", $request->permissions)->pluck('name');
-
-            $role->syncPermissions($permissions);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|unique:roles,name',
+                'permissions' => 'array'
+            ]);
+    
+            $role = Role::create(['name' => $validated['name']]);
+    
+            if (isset($validated['permissions'])) {
+                $role->syncPermissions($validated['permissions']);
+            }
+    
+            return redirect()->route('roles.index')
+                ->with('success', 'Role created successfully');
+        } catch (\Exception $e) {
+            Log::error('Error creating role: ' . $e->getMessage());
+            return back()->with('error', 'Failed to create role');
         }
-
-        return to_route('roles.index')->with("success", "Role added successfully");
     }
-
-    public function edit($id)
+    public function edit(Role $role)
     {
-        return Inertia::render('roles/edit', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-            'role' => Role::with('permissions')->findOrFail($id),
+        return Inertia::render('roles/Edit', [
+            'role' => $role->load('permissions'),
             'permissions' => Permission::all()
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'name' => 'required|min:3|unique:roles,name,' . $id
+            'name' => 'required|unique:roles,name,' . $role->id,
+            'permissions' => 'array'
         ]);
 
-        $role = Role::findById($id);
+        $role->update(['name' => $validated['name']]);
 
-        $role->name = $validated['name'];
+        if (isset($validated['permissions'])) {
+            $role->syncPermissions($validated['permissions']);
+        }
 
-        $role->save();
-
-        $permissions = Permission::whereIn("id", $request->permissions)->pluck('name');
-
-        $role->syncPermissions($permissions);
-
-        return to_route('roles.index')->with("success", "Role updated successfully");
+        return back()->with('success', 'Role updated successfully');
     }
 
-    public function destroy($id)
+    public function destroy(Role $role)
     {
-        $role = Role::findById($id);
+        if ($role->name === 'admin') {
+            return back()->with('error', 'Cannot delete admin role');
+        }
 
         $role->delete();
-
-        return to_route('roles.index')->with("success", "Role Deleted successfully");
+        return back()->with('success', 'Role deleted successfully');
     }
 }

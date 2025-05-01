@@ -3,21 +3,26 @@ import { Head } from "@inertiajs/react";
 import AddStudentButton from "@/Components/AddStudentButton";
 import ModalUpdate from "@/Components/ModalUpdate";
 import ModalDelete from "@/Components/ModalDelete";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function StudentsDashboard({ auth, studentsData, count }) {
+    const [loading, setLoading] = useState(true);
     useEffect(() => {
-        // Check if data is being received
-        console.log('Students Data:', studentsData);
-        console.log('Count:', count);
-    }, [studentsData, count]);
+        if (studentsData) {
+            setLoading(false);
+            console.log('Students Data:', studentsData);
+        }
+    }, [studentsData]);
 
+    if (loading) {
+        return <div>Loading...</div>;
+    }
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
                 <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    Students Dashboard
+                    Students Dashboard ({count || 0} Students)
                 </h2>
             }
         >
@@ -27,11 +32,12 @@ export default function StudentsDashboard({ auth, studentsData, count }) {
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900 flex justify-between items-center">
                             <span className="text-lg font-medium">
-                                Total Students: {count || 0}
+                                 Student Management
                             </span>
-                            <AddStudentButton />
+                            {auth.user.roles.includes('admin') && <AddStudentButton />}
                         </div>
                         
+                        {studentsData?.data?.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
@@ -55,20 +61,29 @@ export default function StudentsDashboard({ auth, studentsData, count }) {
                                             <td className="px-6 py-4 whitespace-nowrap">{student.department}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">{student.email}</td>
                                             <td className="px-6 py-4 whitespace-nowrap flex gap-2">
-                                                <ModalUpdate
-                                                    id={`update_${student.student_id}`}
-                                                    student={student}
-                                                />
-                                                <ModalDelete
-                                                    id={`delete_${student.student_id}`}
-                                                    student={student}
-                                                />
+                                            {auth.user.roles.includes('admin') && (
+                                                        <>
+                                                            <ModalUpdate
+                                                                id={`update_${student.student_id}`}
+                                                                student={student}
+                                                            />
+                                                            <ModalDelete
+                                                                id={`delete_${student.student_id}`}
+                                                                student={student}
+                                                            />
+                                                        </>
+                                                    )}
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
+                        ) : (
+                            <div className="p-6 text-gray-900">
+                                <p>No students found.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

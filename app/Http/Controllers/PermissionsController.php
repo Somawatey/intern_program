@@ -3,61 +3,66 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
-use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
-use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class PermissionsController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(['auth', 'role:admin']);
+    }
+
     public function index()
     {
-        return Inertia::render('permissions/index', [
-            'auth' => [
-                'user' => Auth::user(),
-            ],
-            'permissions' => Permission::paginate(10)
+        return Inertia::render('Permissions/index', [
+            'permissions' => Permission::all()
         ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('Permissions/Create');
     }
 
     public function store(Request $request)
-    {
+{
+    try {
         $validated = $request->validate([
-            'name' => 'required|min:3|unique:permissions,name'
+            'name' => 'required|unique:permissions,name'
         ]);
 
-        $permission = Permission::create([
-            'name' => $validated['name']
+        Permission::create($validated);
+
+        return redirect()->route('permissions.index')
+            ->with('success', 'Permission created successfully');
+    } catch (\Exception $e) {
+        Log::error('Error creating permission: ' . $e->getMessage());
+        return back()->with('error', 'Failed to create permission');
+    }
+}
+
+    public function edit(Permission $permission)
+    {
+        return Inertia::render('Permissions/Edit', [
+            'permission' => $permission
         ]);
-
-        Session::flash("success", "Permission added successfully");
-
-        return to_route('permissions.index');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, Permission $permission)
     {
         $validated = $request->validate([
-            'name' => 'required|min:3|unique:permissions,name,'.$id
+            'name' => 'required|unique:permissions,name,' . $permission->id
         ]);
 
-        $permission = Permission::findById($id);
-        $permission->name = $validated['name'];
-        $permission->save();
+        $permission->update($validated);
 
-        Session::flash("success", "Permission updated successfully");
-
-        return to_route('permissions.index');
+        return back()->with('success', 'Permission updated successfully');
     }
 
-    public function destroy($id)
+    public function destroy(Permission $permission)
     {
-        $permission = Permission::findById($id);
-
         $permission->delete();
-
-        Session::flash("success", "Permission deleted successfully");
-
-        return to_route('permissions.index');
+        return back()->with('success', 'Permission deleted successfully');
     }
 }

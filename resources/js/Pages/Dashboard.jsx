@@ -1,29 +1,48 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, usePage } from '@inertiajs/react';
 
-export default function Dashboard({auth}) {
+export default function Dashboard() {
+    const { auth } = usePage().props;
+    const user = auth.user;
+
+    // Helper function to get user role display name
+    const getUserRole = () => {
+        if (user.roles && user.roles.length > 0) {
+            return user.roles[0].charAt(0).toUpperCase() + user.roles[0].slice(1);
+        }
+        return 'User';
+    };
+
     return (
         <AuthenticatedLayout
-        user={auth.user}
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Dashboard
-                </h2>
-            }
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}
         >
             <Head title="Dashboard" />
 
             <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6 text-gray-900">
-                            You're logged in!
+                            <h3 className="text-lg font-medium mb-4">
+                                Welcome, {user.name}!
+                            </h3>
+                            <div className="mb-4">
+                                <p className="text-sm text-gray-600">
+                                    Role: {getUserRole()}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    Email: {user.email}
+                                </p>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                                <p>Your permissions:</p>
+                                <ul className="list-disc list-inside mt-2">
+                                    {user.permissions.map((permission, index) => (
+                                        <li key={index}>{permission}</li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
-                        
-                        
                     </div>
                 </div>
             </div>
