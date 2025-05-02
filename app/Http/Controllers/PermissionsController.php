@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use Inertia\Inertia;
-
+use Illuminate\Support\Facades\Log;
 class PermissionsController extends Controller
 {
     public function __construct()
@@ -15,8 +15,13 @@ class PermissionsController extends Controller
 
     public function index()
     {
-        return Inertia::render('Permissions/index', [
-            'permissions' => Permission::all()
+        return Inertia::render('Permissions/Index', [
+            'permissions' => Permission::latest()->get(),
+                'can' => [
+                    'create' => auth()->user()->can('create permissions'),
+                    'edit' => auth()->user()->can('edit permissions'),
+                    'delete' => auth()->user()->can('delete permissions'),
+                ]
         ]);
     }
 

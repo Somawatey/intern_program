@@ -1,36 +1,46 @@
 import { useState } from "react";
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import InputError from '@/Components/InputError';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 
-export default function CreateRole({ auth, permissions }) {
-    const { errors } = usePage().props;
-    const [form, setForm] = useState({ name: '', permissions: [] });
+export default function Create({ auth, permissions, can }) {
+    const [formData, setFormData] = useState({
+        name: '',
+        permissions: []
+    });
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
 
-    const handleSubmit = e => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        router.post("/roles", form);
-    }
-
-    const handleSelectPermission = e => {
-        if(e.target.checked) {
-            const checkExist = form.permissions.find(p => p == e.target.value);
-            if(!checkExist) {
-                setForm({...form, permissions: [...form.permissions, e.target.value] });
+        setProcessing(true);
+        
+        router.post(route('roles.store'), formData, {
+            onSuccess: () => {
+                router.visit(route('roles.index'));
+            },
+            onError: (errors) => {
+                setErrors(errors);
+                setProcessing(false);
             }
-        } else {
-            const filtered = form.permissions.filter(p => p != e.target.value);
-            setForm({...form, permissions: filtered});
-        }
-    }
+        });
+    };
+
+    const handlePermissionChange = (permissionId) => {
+        setFormData(prevState => ({
+            ...prevState,
+            permissions: prevState.permissions.includes(permissionId)
+                ? prevState.permissions.filter(id => id !== permissionId)
+                : [...prevState.permissions, permissionId]
+        }));
+    };
 
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Create Role
-                </h2>
-            }
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Create Role</h2>}
         >
             <Head title="Create Role" />
 
@@ -38,51 +48,55 @@ export default function CreateRole({ auth, permissions }) {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium leading-6 text-gray-900">Role Name</label>
-                                        <input 
-                                            type="text" 
-                                            name="name" 
-                                            value={form.name} 
-                                            onChange={e => setForm({...form, name: e.target.value})}
-                                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                                        />
-                                        {errors.name && <div className="text-sm mt-1 text-red-600">{errors.name}</div>}
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-lg font-bold">Permissions</h3>
-                                        <div className="grid grid-cols-2 gap-2 mt-4">
-                                            {permissions.map(permission => (
-                                                <div key={permission.id}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        name="permissions" 
-                                                        value={permission.id} 
-                                                        id={permission.name} 
-                                                        onChange={handleSelectPermission} 
-                                                        className="mx-2" 
-                                                    />
-                                                    <label
-                                                        className="text-sm font-medium leading-6 text-gray-900" 
-                                                        htmlFor={permission.name}
-                                                    >
-                                                        {permission.name}
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        required
+                                    />
+                                    {errors.name && <InputError message={errors.name} />}
                                 </div>
 
-                                <button 
-                                    type="submit"
-                                    className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-                                >
-                                    Submit
-                                </button>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Permissions
+                                    </label>
+                                    <div className="mt-2 space-y-2">
+                                        {permissions.map((permission) => (
+                                            <label key={permission.id} className="inline-flex items-center mr-6 mb-2">
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-checkbox h-4 w-4 text-indigo-600"
+                                                    checked={formData.permissions.includes(permission.id)}
+                                                    onChange={() => handlePermissionChange(permission.id)}
+                                                />
+                                                <span className="ml-2">{permission.name}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {errors.permissions && <InputError message={errors.permissions} />}
+                                </div>
+
+                                <div className="flex items-center justify-end space-x-2">
+                                    <SecondaryButton
+                                        type="button"
+                                        onClick={() => router.visit(route('roles.index'))}
+                                    >
+                                        Cancel
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        type="submit"
+                                        disabled={processing}
+                                    >
+                                        Create Role
+                                    </PrimaryButton>
+                                </div>
                             </form>
                         </div>
                     </div>

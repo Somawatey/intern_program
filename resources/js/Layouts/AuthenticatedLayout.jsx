@@ -31,28 +31,28 @@ export default function AuthenticatedLayout({ header, children }) {
             route: 'users.index',
             href: route('users.index'),
             pattern: 'users.*',
-            permission: 'manage users' 
+            permissions: ['create users', 'edit users', 'delete users', 'view users'] // Change to array of permissions
         },
         { 
             name: 'Roles', 
             route: 'roles.index',
             href: route('roles.index'),
             pattern: 'roles.*',
-            permission: 'manage roles' 
+            permissions: ['create roles', 'edit roles', 'delete roles', 'view roles']
         },
         { 
             name: 'Permissions', 
             route: 'permissions.index',
             href: route('permissions.index'),
             pattern: 'permissions.*',
-            permission: 'manage permissions' 
+            permissions: ['create permissions', 'edit permissions', 'delete permissions', 'view permissions']
         },
         { 
             name: 'Students', 
             route: 'studentsdashboard.index',
             href: route('studentsdashboard.index'),
             pattern: 'studentsdashboard.*',
-            permission: 'view students' 
+            permissions: ['view students','edit students','delete students','create students']
         },
     ];
 
@@ -63,30 +63,27 @@ export default function AuthenticatedLayout({ header, children }) {
             route: 'studentsdashboard.index',
             href: route('studentsdashboard.index'),
             pattern: 'studentsdashboard.*',
-            permission: 'view students'
+            permissions: ['view students', 'delete students', 'edit students','create students'] 
         },
     ];
 
     useEffect(() => {
-        // Get visible links based on user role and permissions
         const links = [...navigationLinks];
-        
-        if (isStaff) {
-            const authorizedStaffLinks = staffLinks.filter(link => 
-                user.permissions?.includes(link.permission)
-            );
-            links.push(...authorizedStaffLinks);
-        }
-        
-        if (isAdmin) {
-            const authorizedAdminLinks = adminLinks.filter(link => 
-                user.permissions?.includes(link.permission)
-            );
-            links.push(...authorizedAdminLinks);
-        }
-        
-        setVisibleLinks(links);
-    }, [user]);
+    
+    if (isAdmin) {
+        const authorizedAdminLinks = adminLinks.filter(link => 
+            link.permissions.some(permission => user.permissions?.includes(permission))
+        );
+        links.push(...authorizedAdminLinks);
+    } else if (isStaff) {
+        const authorizedStaffLinks = staffLinks.filter(link => 
+            link.permissions.some(permission => user.permissions?.includes(permission))
+        );
+        links.push(...authorizedStaffLinks);
+    }
+    
+    setVisibleLinks(links);
+}, [user, isAdmin, isStaff]);
 
     return (
         <div className="min-h-screen bg-gray-100">

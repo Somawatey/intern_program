@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function ListRoles({ auth, roles }) {
+export default function Index({ auth, roles }) {
     const handleDelete = (id) => {
         if(confirm("Are you sure you want to delete?")) {
             router.delete(`/roles/${id}`);
@@ -12,11 +12,7 @@ export default function ListRoles({ auth, roles }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Manage Roles
-                </h2>
-            }
+            header={<h2 className="text-xl font-semibold leading-tight text-gray-800">Manage Roles</h2>}
         >
             <Head title="Roles" />
 
@@ -44,9 +40,9 @@ export default function ListRoles({ auth, roles }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {roles.data.map(role => (
+                                    {roles?.map((role, index) => (
                                         <tr key={role.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-6 py-4">{role.id}</td>
+                                            <td className="px-6 py-4">{index + 1}</td>
                                             <td className="px-6 py-4">{role.name}</td>
                                             <td className="px-6 py-4">{role.guard_name}</td>
                                             <td className="px-6 py-4 space-x-2">

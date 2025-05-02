@@ -1,43 +1,45 @@
-import { useEffect, useState } from "react";
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from "react";
+import { Head, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import InputError from '@/Components/InputError';
+import PrimaryButton from '@/Components/PrimaryButton';
+import SecondaryButton from '@/Components/SecondaryButton';
 
-export default function EditRole({ auth, permissions, role }) {
-    const { errors } = usePage().props;
-    const [form, setForm] = useState({ name: role.name, permissions: [] });
+export default function Edit({ auth, role, allPermissions, can }) {
+    const [formData, setFormData] = useState({
+        name: role.name,
+        permissions: role.permissions || []
+    });
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
 
-    useEffect(() => {
-        if(role) {
-            const permIds = role.permissions.map(p => p.id);
-            setForm({...form, permissions: permIds});
-        }
-    }, [role]);
-
-    const handleSubmit = e => {
+    const handlePermissionChange = (permissionId) => {
+        setFormData(prevState => ({
+            ...prevState,
+            permissions: prevState.permissions.includes(permissionId)
+                ? prevState.permissions.filter(id => id !== permissionId)
+                : [...prevState.permissions, permissionId]
+        }));
+    };
+    const handleSubmit = (e) => {
         e.preventDefault();
-        router.put(`/roles/${role.id}`, form);
-    }
-
-    const handleSelectPermission = e => {
-        if(e.target.checked) {
-            const checkExist = form.permissions.find(p => p == e.target.value);
-            if(!checkExist) {
-                setForm({...form, permissions: [...form.permissions, parseInt(e.target.value)] });
+        setProcessing(true);
+        
+        router.put(route('roles.update', role.id), formData, {
+            onSuccess: () => {
+                router.visit(route('roles.index'));
+            },
+            onError: (errors) => {
+                setErrors(errors);
+                setProcessing(false);
             }
-        } else {
-            const filtered = form.permissions.filter(p => p != parseInt(e.target.value));
-            setForm({...form, permissions: filtered});
-        }
-    }
+        });
+    };
 
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Update Role #{role.id}
-                </h2>
-            }
+            header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Edit Role</h2>}
         >
             <Head title="Edit Role" />
 
@@ -45,52 +47,46 @@ export default function EditRole({ auth, permissions, role }) {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium leading-6 text-gray-900">Role Name</label>
-                                        <input 
-                                            type="text" 
-                                            name="name" 
-                                            value={form.name} 
-                                            onChange={e => setForm({...form, name: e.target.value})}
-                                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                                        />
-                                        {errors.name && <div className="text-sm mt-1 text-red-600">{errors.name}</div>}
-                                    </div>
+                            <form onSubmit={handleSubmit}>
+                                {/* ... name input ... */}
 
-                                    <div>
-                                        <h3 className="text-lg font-bold">Permissions</h3>
-                                        <div className="grid grid-cols-2 gap-2 mt-4">
-                                            {permissions.map(permission => (
-                                                <div key={permission.id}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        name="permissions" 
-                                                        value={permission.id} 
-                                                        id={permission.name} 
-                                                        onChange={handleSelectPermission} 
-                                                        checked={form.permissions.includes(permission.id)}
-                                                        className="mx-2" 
-                                                    />
-                                                    <label
-                                                        className="text-sm font-medium leading-6 text-gray-900" 
-                                                        htmlFor={permission.name}
-                                                    >
-                                                        {permission.name}
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                                        Permissions
+                                    </label>
+                                    <div className="mt-2 grid grid-cols-3 gap-4">
+                                        {allPermissions.map((permission) => (
+                                            <label key={permission.id} className="inline-flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    className="form-checkbox h-4 w-4 text-indigo-600"
+                                                    value={permission.id}
+                                                    checked={formData.permissions.includes(permission.id)}
+                                                    onChange={() => handlePermissionChange(permission.id)}
+                                                />
+                                                <span className="ml-2 text-sm text-gray-600">
+                                                    {permission.name}
+                                                </span>
+                                            </label>
+                                        ))}
                                     </div>
+                                    {errors.permissions && <InputError message={errors.permissions} />}
                                 </div>
 
-                                <button 
-                                    type="submit"
-                                    className="w-full text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
-                                >
-                                    Update Role
-                                </button>
+                                <div className="flex items-center justify-end space-x-2">
+                                    <SecondaryButton
+                                        type="button"
+                                        onClick={() => router.visit(route('roles.index'))}
+                                    >
+                                        Cancel
+                                    </SecondaryButton>
+                                    <PrimaryButton
+                                        type="submit"
+                                        disabled={processing}
+                                    >
+                                        Update Role
+                                    </PrimaryButton>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -99,3 +95,4 @@ export default function EditRole({ auth, permissions, role }) {
         </AuthenticatedLayout>
     );
 }
+

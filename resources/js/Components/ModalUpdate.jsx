@@ -3,9 +3,9 @@ import InputLabel from "@/Components/InputLabel";
 import TextInput from "@/Components/TextInput";
 import { useForm } from "@inertiajs/react";
 
-export default function ModalUpdate({ student }) {  // Changed from { id, s } to { student }
-    const { data, setData, patch, processing, errors, reset } = useForm({
-        student_id: student.student_id,
+
+export default function ModalUpdate({ student ,onUpdate}) {
+    const { data, setData, put, processing, errors, reset } = useForm({
         first_name: student.first_name,
         last_name: student.last_name,
         department: student.department,
@@ -14,19 +14,31 @@ export default function ModalUpdate({ student }) {  // Changed from { id, s } to
 
     const handleSubmit = (e) => {
         e.preventDefault();
-    
-        patch(`/studentsdashboard/update/${student.student_id}`, {
+
+        put(route('studentsdashboard.update', student.student_id), data,{
             preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 reset();
                 document.getElementById(`modal_update_${student.student_id}`).close();
+                if (onUpdate) onUpdate();
             },
-            onError: () => {
-                document.getElementById(`modal_update_${student.student_id}`).showModal();
+            onError: (errors) => {
+                console.error('Update failed:', errors);
+            },
+            onFinish: () => {
+                // Ensure form is reset even if there's an error
+                if (!errors) {
+                    reset();
+                }
             }
         });
     };
 
+    const handleClose = () => {
+        reset();
+        document.getElementById(`modal_update_${student.student_id}`).close();
+    };
     return (
         <>
             <button
@@ -44,14 +56,12 @@ export default function ModalUpdate({ student }) {  // Changed from { id, s } to
                             <small className="block text-gray-500">ID: {student.student_id}</small>
                         </h3>
                         <button
-                            className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-                            onClick={() => {
-                                reset();
-                                document.getElementById(`modal_update_${student.student_id}`).close();
-                            }}
-                        >
-                            ✕
-                        </button>
+                        className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                        onClick={handleClose}
+                        type="button"
+                    >
+                        ✕
+                    </button>
                     </div>
 
                     <form onSubmit={handleSubmit} className="mt-6 space-y-6">
@@ -106,12 +116,9 @@ export default function ModalUpdate({ student }) {  // Changed from { id, s } to
                         </div>
 
                         <div className="flex justify-end gap-2">
-                            <button
+                        <button
                                 type="button"
-                                onClick={() => {
-                                    reset();
-                                    document.getElementById(`modal_update_${student.student_id}`).close();
-                                }}
+                                onClick={handleClose}
                                 className="btn text-black border-0 bg-gray-300 hover:bg-gray-400"
                             >
                                 Cancel
@@ -121,7 +128,7 @@ export default function ModalUpdate({ student }) {  // Changed from { id, s } to
                                 disabled={processing}
                                 className="btn bg-yellow-400 hover:bg-yellow-500 text-white"
                             >
-                                Update
+                                {processing ? 'Updating...' : 'Update'}
                             </button>
                         </div>
                     </form>

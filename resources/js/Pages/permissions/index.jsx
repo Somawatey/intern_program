@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Head, Link, router } from '@inertiajs/react';
-import CreatePermission from "./create_permission.jsx";
+import CreatePermission from "./Create.jsx";
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function ListPermissions({ auth, permissions }) {
+export default function Index({ auth, permissions, can }) {
     const [showModal, setShowModal] = useState(undefined);
 
     const handleDelete = (id) => {
@@ -29,13 +29,15 @@ export default function ListPermissions({ auth, permissions }) {
                         <div className="p-6">
                             <div className="flex justify-between mb-6">
                                 <h3 className="text-lg font-semibold">All Permissions</h3>
-                                <button 
-                                    type="button" 
-                                    onClick={() => setShowModal(true)} 
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                >
-                                    Create Permission
-                                </button>
+                                {can?.create && (
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setShowModal(true)} 
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                        Create Permission
+                                    </button>
+                                )}
                             </div>
 
                             <table className="w-full text-sm text-left text-gray-500">
@@ -48,24 +50,28 @@ export default function ListPermissions({ auth, permissions }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {permissions.data.map(permission => (
+                                    {Array.isArray(permissions) && permissions.map((permission, index) => (
                                         <tr key={permission.id} className="bg-white border-b hover:bg-gray-50">
-                                            <td className="px-6 py-4">{permission.id}</td>
+                                            <td className="px-6 py-4">{index + 1}</td>
                                             <td className="px-6 py-4">{permission.name}</td>
                                             <td className="px-6 py-4">{permission.guard_name}</td>
                                             <td className="px-6 py-4 space-x-2">
-                                                <button
-                                                    onClick={() => setShowModal(permission)}
-                                                    className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(permission.id)}
-                                                    className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700"
-                                                >
-                                                    Delete
-                                                </button>
+                                                {can?.edit && (
+                                                    <button
+                                                        onClick={() => setShowModal(permission)}
+                                                        className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700"
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                )}
+                                                {can?.delete && (
+                                                    <button
+                                                        onClick={() => handleDelete(permission.id)}
+                                                        className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -79,7 +85,8 @@ export default function ListPermissions({ auth, permissions }) {
             {showModal !== undefined && (
                 <CreatePermission 
                     onClose={() => setShowModal(undefined)} 
-                    permission={showModal} 
+                    permission={showModal}
+                    can={can}
                 />
             )}
         </AuthenticatedLayout>

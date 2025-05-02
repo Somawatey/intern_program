@@ -8,23 +8,26 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'verified']);
-        $this->middleware('role:admin');
+        $this->middleware(['auth', 'role:admin']);
     }
 
     public function index()
     {
         return Inertia::render('Users/Index', [
-            'users' => User::with(['roles', 'permissions'])
-                          ->orderBy('name')
-                          ->paginate(10),
+            'users' => User::with('roles', 'permissions')->get(),
             'roles' => Role::all(),
-            'studentPermissions' => Permission::where('name', 'LIKE', '%students%')->get(),
+            'can' => [
+                'create' => Auth::user()->can('create users'),
+                'edit' => Auth::user()->can('edit users'),
+                'delete' => Auth::user()->can('delete users'),
+                'view' => Auth::user()->can('view users'),
+            ]
         ]);
     }
 
@@ -34,9 +37,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
-            'role' => 'required|exists:roles,name',
-            'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name'
+            'role' => 'required|exists:roles,id',
+         
         ]);
 
         $user = User::create([
@@ -45,11 +47,9 @@ class UserController extends Controller
             'password' => Hash::make($validated['password'])
         ]);
 
-        $user->assignRole($validated['role']);
+        $role = Role::findById($validated['role']);  // Get role by ID
+        $user->assignRole($role);
 
-        if (isset($validated['permissions'])) {
-            $user->syncPermissions($validated['permissions']);
-        }
 
         return back()->with('success', 'User created successfully');
     }
@@ -61,9 +61,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8',
-            'role' => 'sometimes|required|exists:roles,name',
-            'permissions' => 'array',
-            'permissions.*' => 'exists:permissions,name'
+            'role' => 'sometimes|required|exists:roles,id',
+          
         ]);
 
         $user->update([
@@ -74,10 +73,6 @@ class UserController extends Controller
 
         if (isset($validated['role'])) {
             $user->syncRoles([$validated['role']]);
-        }
-
-        if (isset($validated['permissions'])) {
-            $user->syncPermissions($validated['permissions']);
         }
 
         return back()->with('success', 'User updated successfully');

@@ -4,8 +4,10 @@ import TextInput from "@/Components/TextInput";
 import { useForm } from "@inertiajs/react";
 import { router } from "@inertiajs/react";
 
+
 export default function AddStudentButton({ className = "", disabled }) {
     const { data, setData, post, reset, errors, processing } = useForm({
+        
         first_name: "",
         last_name: "",
         department: "",
@@ -14,12 +16,15 @@ export default function AddStudentButton({ className = "", disabled }) {
 
     const submit = (e) => {
         e.preventDefault();
-
-        router.post("/studentsdashboard/store", data, {
+        post(route('studentsdashboard.store'), {
+            preserveScroll: true,
             onSuccess: () => {
+                document.getElementById("my_modal_2").close();
                 reset();
-            document.getElementById("my_modal_2").close();
             },
+            onError: () => {
+                console.error('Failed to add student');
+            }
         });
     };
 

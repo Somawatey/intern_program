@@ -1,21 +1,23 @@
-import { useForm } from "@inertiajs/react";
+import { useForm } from '@inertiajs/react';
+import React from 'react';
 
-export default function ModalDelete({ student }) {
-    if (!student) return null; // Guard clause for undefined student
 
+export default function ModalDelete({ student, onDelete }) {
     const { delete: destroy, processing } = useForm();
 
     const handleDelete = (e) => {
         e.preventDefault();
         
-        if (confirm(`Are you sure you want to delete ${student.first_name}'s record?`)) {
-            destroy(`/studentsdashboard/delete/${student.student_id}`, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    document.getElementById(`modal_delete_${student.student_id}`).close();
-                },
-            });
-        }
+        destroy(route('studentsdashboard.destroy', student.student_id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                document.getElementById(`modal_delete_${student.student_id}`).close();
+                if (onDelete) onDelete();
+            },
+            onError: (errors) => {
+                console.error('Delete failed:', errors);
+            }
+        });
     };
 
     return (
@@ -29,31 +31,22 @@ export default function ModalDelete({ student }) {
 
             <dialog id={`modal_delete_${student.student_id}`} className="modal">
                 <div className="modal-box bg-slate-50">
-                    <div className="modal-header">
-                        <h3 className="font-bold text-lg">
-                            Delete Confirmation
-                            <small className="block text-gray-500">ID: {student.student_id}</small>
-                        </h3>
-                    </div>
-
-                    <div className="py-4">
-                        <p>Are you sure you want to delete <strong>{student.first_name} {student.last_name}</strong>?</p>
-                        <p className="text-sm text-gray-500 mt-1">This action cannot be undone.</p>
-                    </div>
-
+                    <h3 className="font-bold text-lg">Confirm Delete</h3>
+                    <p className="py-4">Are you sure you want to delete {student.first_name} {student.last_name}?</p>
                     <div className="modal-action">
                         <button
+                            type="button"
                             onClick={() => document.getElementById(`modal_delete_${student.student_id}`).close()}
-                            className="btn text-black border-0 bg-gray-300 hover:bg-gray-400"
+                            className="btn btn-outline"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleDelete}
                             disabled={processing}
-                            className="btn bg-red-600 hover:bg-red-700 text-white"
+                            className="btn btn-error text-white"
                         >
-                            Delete
+                            {processing ? 'Deleting...' : 'Delete'}
                         </button>
                     </div>
                 </div>

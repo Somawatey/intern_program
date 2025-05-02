@@ -8,11 +8,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 
+
 class StudentsModelController extends Controller
 {
     public function __construct()
     {
         $this->middleware(['auth', 'verified']);
+        $this->middleware(['role:admin|staff']);
         $this->middleware('permission:view students')->only(['index']);
         $this->middleware('permission:create students')->only(['store']);
         $this->middleware('permission:edit students')->only(['update']);
@@ -43,46 +45,65 @@ class StudentsModelController extends Controller
 
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255|min:2',
-                'last_name' => 'required|string|max:255|min:2',
-                'department' => 'required|string|max:255|min:2',
-                'email' => 'required|email|max:255|unique:students_models,email',
+        Log::info('Permission check for user:', [
+            'user_id' => Auth::id(),
+            'user_name' => Auth::user()->name,
+            'roles' => Auth::user()->getRoleNames(),
+            'permissions' => Auth::user()->getAllPermissions()->pluck('name'),
+            'can_create_students' => Auth::user()->can('create students')
+        ]);
+
+        if (!Auth::user()->can('create students')) {
+            Log::warning('Unauthorized attempt to create student by user:', [
+                'user_id' => Auth::id()
             ]);
-
-            StudentsModel::create($validated);
-
-            return back()->with('success', 'Student added successfully');
-        } catch (\Exception $e) {
-            Log::error('Error in StudentsModelController@store: ' . $e->getMessage());
-            return back()->with('error', 'Failed to add student');
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255|min:2',
+            'last_name' => 'required|string|max:255|min:2',
+            'department' => 'required|string|max:255|min:2',
+            'email' => 'required|email|max:255|unique:students_models,email',
+        ]);
+
+        $student = StudentsModel::create($validated);
+
+        Log::info('Student created successfully', [
+            'student_id' => $student->id,
+            'created_by' => Auth::id()
+        ]);
+
+        return back()->with('success', 'Student added successfully');
     }
 
     public function update(Request $request, $student_id)
-    {
-        try {
-            Log::info('Update request for student ID: ' . $student_id);
-            Log::info('Update data: ', $request->all());
+{
+    try {
+        $student = StudentsModel::findOrFail($student_id);
+        
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255|min:2',
+            'last_name' => 'required|string|max:255|min:2',
+            'department' => 'required|string|max:255|min:2',
+            'email' => 'required|email|max:255|unique:students_models,email,' . $student->student_id . ',student_id',
+        ]);
 
-            $student = StudentsModel::findOrFail($student_id);
-
-            $validated = $request->validate([
-                'first_name' => 'required|string|max:255|min:2',
-                'last_name' => 'required|string|max:255|min:2',
-                'department' => 'required|string|max:255|min:2',
-                'email' => 'required|email|max:255|unique:students_models,email,' . $student_id,
-            ]);
-
-            $student->update($validated);
-
-            return back()->with('success', 'Student updated successfully');
-        } catch (\Exception $e) {
-            Log::error('Error in StudentsModelController@update: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update student');
+        if (!$student->update($validated)) {
+            throw new \Exception('Failed to update student record');
         }
+
+        return back()->with('success', 'Student updated successfully');
+    } catch (\Exception $e) {
+        \Log::error('Update failed:', [
+            'error' => $e->getMessage(),
+            'student_id' => $student_id,
+            'data' => $request->all()
+        ]);
+        
+        return back()->withErrors(['error' => 'Failed to update student: ' . $e->getMessage()]);
     }
+}
 
     public function destroy($student_id)
     {

@@ -68,13 +68,13 @@ class RoleAndPermissionSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'email' => 'admin@dashboard.com',
-                'password' => 'password123',
+                'password' => '12345678',
                 'role' => 'admin'
             ],
             [
                 'name' => 'Staff',
                 'email' => 'staff@dashboard.com',
-                'password' => 'password123',
+                'password' => '12345678',
                 'role' => 'staff'
             ]
         ];
